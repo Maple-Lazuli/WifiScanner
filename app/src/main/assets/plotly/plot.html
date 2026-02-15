@@ -1,49 +1,30 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <script src="plotly.min.js"></script>
-  </head>
-  <body>
-    <div id="plot" style="width:100%;height:100%;"></div>
-    <script>
-      // Mapbox token
-      Plotly.setPlotConfig({mapboxAccessToken: 'YOUR_MAPBOX_TOKEN_HERE'});
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-      var trace = {
-        type: 'scattermapbox',
-        lat: [],
-        lon: [],
-        mode: 'markers',
-        marker: {size: 10, color: [], colorscale: 'Viridis', showscale: true},
-        text: []
-      };
+  <link rel="stylesheet" href="leaflet.css" />
+  <script src="leaflet.js"></script>
 
-      var data = [trace];
+  <style>
+    html, body { margin:0; height:100%; }
+    #map { height:100vh; width:100vw; }
+  </style>
+</head>
 
-      var layout = {
-        mapbox: {
-          style: 'streets',  // street map
-          zoom: 12,
-          center: {lat: 0, lon: 0}  // initial center
-        },
-        margin: { t:0, b:0, l:0, r:0 }
-      };
+<body>
+<div id="map"></div>
 
-      Plotly.newPlot('plot', data, layout);
+<script>
+  console.log("Leaflet:", typeof L);
 
-      // function for live updates
-      window.updatePlot = function(lats, lons, colors, texts) {
-        Plotly.update('plot', {lat:[lats], lon:[lons], 'marker.color':[colors], text:[texts]});
+  var map = L.map('map').setView([38.9, -77.0], 13);
 
-        if(lats.length > 0 && lons.length > 0) {
-          // recenter on latest point
-          Plotly.relayout('plot', {
-            'mapbox.center.lat': lats[lats.length - 1],
-            'mapbox.center.lon': lons[lons.length - 1]
-          });
-        }
-      }
-    </script>
-  </body>
+  var tileLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+  ).addTo(map);
+
+  tileLayer.on("tileerror", e => console.log("Tile failed", e));
+</script>
+</body>
 </html>

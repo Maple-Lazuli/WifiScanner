@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="leaflet.css"/>
+    <script src="leaflet.js"></script>
+
+    <style>
+        /* This is the critical part to fix the white screen */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #222; /* Dark grey so you know it's not 'white' anymore */
+        }
+
+        #map {
+            position: fixed; /* Bypasses parent height issues */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    var map;
+    var layerGroup;
+
+    console.log("Checking Leaflet...");
+    if (typeof L === 'undefined') {
+        document.body.innerHTML = "<h1 style='color:white; padding:20px;'>Leaflet.js not found!</h1>";
+    } else {
+        // Initialize map
+        map = L.map('map', {
+            zoomControl: false // Cleaner for mobile
+        }).setView([38.99, -76.94], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        layerGroup = L.layerGroup().addTo(map);
+        console.log("Map initialized successfully");
+    }
+
+    window.updatePlot = function(lat, lon, rssi, texts) {
+        if (!map) return;
+
+        layerGroup.clearLayers();
+
+        for (let i = 0; i < lat.length; i++) {
+            let strength = Math.min(Math.max(rssi[i], -100), -30);
+            let norm = (strength + 100) / 70;
+            let color = "rgb(" + Math.floor(255 * (1 - norm)) + "," + Math.floor(255 * norm) + ", 0)";
+
+            L.circleMarker([lat[i], lon[i]], {
+                radius: 6,
+                fillColor: color,
+                color: "#000",
+                weight: 1,
+                fillOpacity: 0.8
+            }).addTo(layerGroup);
+        }
+
+        // Only pan if we have data
+        if (lat.length > 0) {
+            map.panTo([lat[lat.length - 1], lon[lon.length - 1]]);
+        }
+    };
+</script>
+</body>
+</html>

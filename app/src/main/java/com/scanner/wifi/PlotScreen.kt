@@ -1,5 +1,9 @@
 package com.scanner.wifi
 
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,79 +14,54 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun PlotScreen(samples: List<WifiSample>) {
+    // Better way to hold the reference in Compose
+    var webView by remember { mutableStateOf<WebView?>(null) }
+    var pageLoaded by remember { mutableStateOf(false) }
 
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
-
-    val initialHtml = """
-    <html>
-      <head>
-        <script src="file:///android_asset/plotly/plotly.min.js"></script>
-      </head>
-      <body>
-        <div id="plot" style="width:100%;height:100%;"></div>
-        <script>
-          window.onload = function() {
-            var trace = {
-                x: [],
-                y: [],
-                mode: 'markers',
-                marker: {size:10, color:[], colorscale:'Viridis', showscale:true},
-                text: []
-            };
-            var data = [trace];
-            var layout = {
-                title: 'Live WiFi Samples',
-                xaxis: {title:'Longitude'},
-                yaxis: {title:'Latitude'}
-            };
-            Plotly.newPlot('plot', data, layout);
-
-            // expose function to update plot
-            window.updatePlot = function(xs, ys, colors, texts) {
-                Plotly.update('plot', {
-                    x: [xs],
-                    y: [ys],
-                    'marker.color': [colors],
-                    text: [texts]
-                });
-            }
-          }
-        </script>
-      </body>
-    </html>
-    """.trimIndent()
-
-    AndroidView(factory = { context ->
-        WebView(context).apply {
-            webViewClient = WebViewClient()
-            settings.javaScriptEnabled = true
-            loadDataWithBaseURL(
-                "file:///android_asset/", initialHtml,
-                "text/html", "UTF-8", null
-            )
-            webViewRef = this
-        }
-    }, modifier = Modifier.fillMaxSize())
-
-    // live update loop
-    LaunchedEffect(samples) {
-        while (true) {
-            val xData = samples.joinToString(",") { it.longitude.toString() }
-            val yData = samples.joinToString(",") { it.latitude.toString() }
-            val rssiData = samples.joinToString(",") { it.rssi.toString() }
-            val textData = samples.joinToString(",") { "'${it.ssid} ${it.rssi}'" }
-
-            val js = """
-                if(window.updatePlot) {
-                    window.updatePlot([$xData], [$yData], [$rssiData], [$textData]);
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { context ->
+            WebView(context).apply {
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        Log.d("WEBVIEW", "Page loaded: $url")
+                        pageLoaded = true
+                    }
                 }
-            """.trimIndent()
 
-            webViewRef?.post {
-                webViewRef?.evaluateJavascript(js, null)
+                webChromeClient = object : WebChromeClient() {
+                    override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                        Log.d("WEBVIEW_JS", "${consoleMessage.message()} @ line ${consoleMessage.lineNumber()}")
+                        return true
+                    }
+                }
+
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    allowFileAccess = true
+                    allowContentAccess = true
+                    // Allows the local HTML to fetch OpenStreetMap tiles
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                }
+
+                loadUrl("file:///android_asset/leaflet/map.html")
+                webView = this
             }
+        }
+    )
 
-            delay(2000)
+    // Injection Loop
+    LaunchedEffect(pageLoaded, samples) {
+        if (pageLoaded && samples.isNotEmpty()) {
+            val latData = samples.joinToString(",") { it.latitude.toString() }
+            val lonData = samples.joinToString(",") { it.longitude.toString() }
+            val rssiData = samples.joinToString(",") { it.rssi.toString() }
+
+            // Note: Added an empty array for the 'texts' parameter to prevent JS errors
+            val js = "if(window.updatePlot){ window.updatePlot([$latData], [$lonData], [$rssiData], []); }"
+
+            webView?.evaluateJavascript(js, null)
         }
     }
 }
