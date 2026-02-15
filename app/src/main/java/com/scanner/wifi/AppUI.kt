@@ -48,7 +48,7 @@ fun AppUI(samples: List<WifiSample>) {
 
             composable("settings") { SettingsScreen() }
             composable("samples") { SamplesScreen(samples) }
-            composable("plot") { PlotScreen() }
+            composable("plot") { PlotScreen(samples) }
         }
     }
 }
