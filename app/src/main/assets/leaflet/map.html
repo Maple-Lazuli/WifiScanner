@@ -6,24 +6,22 @@
     <script src="leaflet.js"></script>
 
     <style>
-        /* This is the critical part to fix the white screen */
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #222; /* Dark grey so you know it's not 'white' anymore */
+            background-color: #222;
         }
 
         #map {
-            position: fixed; /* Bypasses parent height issues */
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
         }
     </style>
 </head>
@@ -32,46 +30,38 @@
 <div id="map"></div>
 
 <script>
-    var map;
-    var layerGroup;
+    var map = L.map('map', { zoomControl: false }).setView([38.99, -76.94], 15);
+    var layerGroup = L.layerGroup().addTo(map);
 
-    console.log("Checking Leaflet...");
-    if (typeof L === 'undefined') {
-        document.body.innerHTML = "<h1 style='color:white; padding:20px;'>Leaflet.js not found!</h1>";
-    } else {
-        // Initialize map
-        map = L.map('map', {
-            zoomControl: false // Cleaner for mobile
-        }).setView([38.99, -76.94], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19
-        }).addTo(map);
-
-        layerGroup = L.layerGroup().addTo(map);
-        console.log("Map initialized successfully");
-    }
-
-    window.updatePlot = function(lat, lon, rssi, texts) {
+    window.updatePlot = function(lat, lon, rssi, isProtected) {
         if (!map) return;
-
         layerGroup.clearLayers();
 
         for (let i = 0; i < lat.length; i++) {
+            // Signal Color Logic
             let strength = Math.min(Math.max(rssi[i], -100), -30);
             let norm = (strength + 100) / 70;
             let color = "rgb(" + Math.floor(255 * (1 - norm)) + "," + Math.floor(255 * norm) + ", 0)";
 
+            // Security Styling
+            let secure = isProtected[i];
+
             L.circleMarker([lat[i], lon[i]], {
-                radius: 6,
+                radius: secure ? 6 : 10,       // Open networks are larger
                 fillColor: color,
-                color: "#000",
-                weight: 1,
-                fillOpacity: 0.8
-            }).addTo(layerGroup);
+                fillOpacity: 0.5,              // Alpha set to 0.5
+                color: secure ? "#333" : "#F00", // Red border for open networks
+                weight: secure ? 1 : 3,        // Thicker border for open networks
+                dashArray: secure ? null : "4, 4" // Dashed line for open networks
+            })
+            .bindPopup((secure ? "🔒 Secure" : "🔓 UNPROTECTED") + "<br>RSSI: " + rssi[i])
+            .addTo(layerGroup);
         }
 
-        // Only pan if we have data
         if (lat.length > 0) {
             map.panTo([lat[lat.length - 1], lon[lon.length - 1]]);
         }

@@ -3,6 +3,7 @@ package com.scanner.wifi
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.webkit.WebView
@@ -30,7 +31,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private var currentLocation: android.location.Location? = null
+    private var currentLocation: Location? = null
 
     private var samplingJob: Job? = null
     private val samples = mutableListOf<WifiSample>()
@@ -118,7 +119,7 @@ class MainActivity : ComponentActivity() {
         samplingJob = CoroutineScope(Dispatchers.Main).launch {
 
             val wifiManager =
-                applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
 
             while (isActive) {
                 collectSample(wifiManager)
@@ -155,7 +156,8 @@ class MainActivity : ComponentActivity() {
                     bssid = network.BSSID,
                     rssi = network.level,
                     latitude = location.latitude,
-                    longitude = location.longitude
+                    longitude = location.longitude,
+                    capabilities = network.capabilities
                 )
             )
         }

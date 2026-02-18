@@ -1,13 +1,16 @@
 package com.scanner.wifi
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
@@ -17,40 +20,50 @@ import java.util.*
 fun SamplesScreen(samples: List<WifiSample>) {
     val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
-    Column(Modifier.padding(16.dp)) {
-        Text("Samples Table", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(12.dp))
+    Column(Modifier.fillMaxSize().padding(8.dp)) {
+        Text("Samples Table", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
 
-        // Header Row
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(Color.LightGray)
-                .padding(8.dp)
-        ) {
-            TableCell("Time", 100.dp)
-            TableCell("Lat", 80.dp)
-            TableCell("Lon", 80.dp)
-            TableCell("SSID", 120.dp)
-            TableCell("BSSID", 140.dp)
-            TableCell("RSSI", 60.dp)
-        }
+        // Wrap everything in a horizontal scroll so the columns stay "tight"
+        // but accessible on narrow screens
+        val horizontalScrollState = rememberScrollState()
 
-        Spacer(Modifier.height(4.dp))
+        Column(Modifier.horizontalScroll(horizontalScrollState)) {
+            // Header Row
+            Row(
+                Modifier
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .padding(vertical = 4.dp) // Tighter vertical padding
+            ) {
+                TableCell("Time", 70.dp, isHeader = true)
+                TableCell("Lat", 75.dp, isHeader = true)
+                TableCell("Lon", 75.dp, isHeader = true)
+                TableCell("SSID", 100.dp, isHeader = true)
+                TableCell("BSSID", 130.dp, isHeader = true)
+                TableCell("RSSI", 45.dp, isHeader = true)
+                TableCell("Protected", 100.dp, isHeader = true)
 
-        LazyColumn {
-            items(samples) { sample ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(4.dp)
-                ) {
-                    TableCell(dateFormat.format(Date(sample.timestamp)), 100.dp)
-                    TableCell(sample.latitude.toString(), 80.dp)
-                    TableCell(sample.longitude.toString(), 80.dp)
-                    TableCell(sample.ssid, 120.dp)
-                    TableCell(sample.bssid, 140.dp)
-                    TableCell(sample.rssi.toString(), 60.dp)
+            }
+
+            LazyColumn(Modifier.fillMaxWidth()) {
+                items(samples) { sample ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 1.dp) // Minimal vertical gap
+                    ) {
+                        TableCell(dateFormat.format(Date(sample.timestamp)), 70.dp)
+                        // Limiting decimal places to keep Lat/Lon tight
+                        TableCell("%.5f".format(sample.latitude), 75.dp)
+                        TableCell("%.5f".format(sample.longitude), 75.dp)
+                        TableCell(sample.ssid, 100.dp)
+                        TableCell(sample.bssid, 130.dp)
+                        TableCell(sample.rssi.toString(), 45.dp)
+                        TableCell(sample.isSecure.toString(), 100.dp)
+
+                    }
+                    // Optional: Very thin divider for readability
+                    HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
                 }
             }
         }
@@ -58,12 +71,19 @@ fun SamplesScreen(samples: List<WifiSample>) {
 }
 
 @Composable
-fun RowScope.TableCell(text: String, width: Dp) {
+fun TableCell(
+    text: String,
+    width: Dp,
+    isHeader: Boolean = false
+) {
     Text(
-        text,
-        Modifier
+        text = text,
+        modifier = Modifier
             .width(width)
-            .padding(horizontal = 4.dp),
-        style = MaterialTheme.typography.bodyMedium
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        // Use bodySmall for tighter text, and Bold for headers
+        style = if (isHeader) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }

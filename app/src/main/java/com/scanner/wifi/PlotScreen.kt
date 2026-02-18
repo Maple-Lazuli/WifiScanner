@@ -14,7 +14,6 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun PlotScreen(samples: List<WifiSample>) {
-    // Better way to hold the reference in Compose
     var webView by remember { mutableStateOf<WebView?>(null) }
     var pageLoaded by remember { mutableStateOf(false) }
 
@@ -24,7 +23,6 @@ fun PlotScreen(samples: List<WifiSample>) {
             WebView(context).apply {
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
-                        Log.d("WEBVIEW", "Page loaded: $url")
                         pageLoaded = true
                     }
                 }
@@ -40,8 +38,6 @@ fun PlotScreen(samples: List<WifiSample>) {
                     javaScriptEnabled = true
                     domStorageEnabled = true
                     allowFileAccess = true
-                    allowContentAccess = true
-                    // Allows the local HTML to fetch OpenStreetMap tiles
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 }
 
@@ -51,16 +47,17 @@ fun PlotScreen(samples: List<WifiSample>) {
         }
     )
 
-    // Injection Loop
     LaunchedEffect(pageLoaded, samples) {
         if (pageLoaded && samples.isNotEmpty()) {
             val latData = samples.joinToString(",") { it.latitude.toString() }
             val lonData = samples.joinToString(",") { it.longitude.toString() }
             val rssiData = samples.joinToString(",") { it.rssi.toString() }
 
-            // Note: Added an empty array for the 'texts' parameter to prevent JS errors
-            val js = "if(window.updatePlot){ window.updatePlot([$latData], [$lonData], [$rssiData], []); }"
+            // Logic: Check capabilities for security keywords.
+            // Returns true if secure, false if open.
+            val protectionData = samples.joinToString(",") { it.isSecure.toString() }
 
+            val js = "if(window.updatePlot){ window.updatePlot([$latData], [$lonData], [$rssiData], [$protectionData]); }"
             webView?.evaluateJavascript(js, null)
         }
     }
