@@ -42,6 +42,7 @@ fun SamplesScreen(samples: List<WifiSample>) {
                 TableCell("BSSID", 130.dp, isHeader = true)
                 TableCell("RSSI", 45.dp, isHeader = true)
                 TableCell("Protected", 100.dp, isHeader = true)
+                TableCell("Samples", 50.dp, isHeader = true)
 
             }
 
@@ -60,7 +61,7 @@ fun SamplesScreen(samples: List<WifiSample>) {
                         TableCell(sample.bssid, 130.dp)
                         TableCell(sample.rssi.toString(), 45.dp)
                         TableCell(sample.isSecure.toString(), 100.dp)
-
+                        TableCell("${sample.count}", 50.dp)
                     }
                     // Optional: Very thin divider for readability
                     HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
