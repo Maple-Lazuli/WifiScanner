@@ -19,3 +19,25 @@ data class WifiSample(
                     cap.contains("EAP")
         }
 }
+
+fun getAveragedSamples(samples: List<WifiSample>): List<WifiSample> {
+    return samples
+        .groupBy { it.bssid } // Group by unique hardware ID
+        .map { (bssid, readings) ->
+            // Use the most recent reading as the 'template' for metadata
+            val latest = readings.maxByOrNull { it.timestamp } ?: readings.first()
+
+            WifiSample(
+                timestamp = latest.timestamp,
+                ssid = latest.ssid,
+                bssid = bssid,
+                // Average the signal strength
+                rssi = readings.map { it.rssi }.average().toInt(),
+                // Average the coordinates
+                latitude = readings.map { it.latitude }.average(),
+                longitude = readings.map { it.longitude }.average(),
+                capabilities = latest.capabilities
+            )
+        }
+        .sortedBy { it.ssid } // Optional: put strongest signals at the top
+}
